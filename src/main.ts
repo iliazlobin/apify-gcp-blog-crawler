@@ -4,8 +4,10 @@ import { router } from './routes.js';
 
 await Actor.init();
 
+// https://cloud.google.com/blog/topics/inside-google-cloud/complete-list-google-cloud-blog-links-2021
 const startUrls = [
-    'https://cloud.google.com/blog/',
+    // 'https://cloud.google.com/blog/products/ai-machine-learning',
+    'https://cloud.google.com/blog/products/cloud-migration',
 ];
 
 const proxyConfiguration = await Actor.createProxyConfiguration();
