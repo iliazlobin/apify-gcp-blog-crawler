@@ -4,16 +4,19 @@ import { createPuppeteerRouter } from 'crawlee';
 export const router = createPuppeteerRouter();
 
 router.addDefaultHandler(async ({ page, log, enqueueLinks }) => {
-    log.info(`processing the page in the default handler: ${page.url()}`);
+    const url = page.url() ?? '';
+    log.info(`processing default page: ${url}`);
 
     let {
-        paginationLimit = 5,
+        lookBackWindow = 0,
+        paginationLimit = 1,
+        pageItemsLimit = 3,
     } = await Actor.getInput<{
+        lookBackWindow?: number,
         paginationLimit?: number
+        pageItemsLimit?: number
     }>() || {};
-    log.info(`inputs:
-        paginationLimit: ${paginationLimit}
-    `);
+    log.debug(`inputs: lookBackWindow=${lookBackWindow}, paginationLimit=${paginationLimit}, pageItemsLimit=${pageItemsLimit}`);
 
     log.info(`paginating ${paginationLimit} times`);
     for (let i = 0; i < paginationLimit; i++) {
@@ -55,9 +58,25 @@ router.addDefaultHandler(async ({ page, log, enqueueLinks }) => {
         return items;
     });
 
-    log.info(`enqueuing ${cards.length} cards`);
-    for (const card of cards) {
-        log.debug(`enqueueing url: ${card.url}, ${card.title}`);
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+    const startOfTodayText = startOfToday.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
+    const targetDate = new Date(startOfToday.getTime() - lookBackWindow * 24 * 60 * 60 * 1000);
+    const targetDateText = targetDate.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
+
+    const limitedCards: any[] = [];
+    if (pageItemsLimit > 0) {
+        log.info(`limiting cards: ${pageItemsLimit} out of ${cards.length}`);
+        for (let i = 0; i < pageItemsLimit; i++) {
+            limitedCards.push(cards[i]);
+        }
+    } else {
+        limitedCards.push(...cards);
+    }
+
+    log.info(`enqueuing ${limitedCards.length} cards`);
+    for (const card of limitedCards) {
+        log.debug(`enqueueing url: ${card.url} ${card.title}`);
 
         await enqueueLinks({
             urls: [card.url],
@@ -66,20 +85,33 @@ router.addDefaultHandler(async ({ page, log, enqueueLinks }) => {
                 title: card.title,
                 author: card.author,
                 tag: card.tag,
+                targetDateText: targetDateText,
             },
         });
     }
 });
 
 router.addHandler('article', async ({ request, page, log }) => {
+    const url = request.loadedUrl ?? '';
     const pageTitle = await page.title();
     const data = request.userData;
 
-    log.info(`processing the page in the article handler: ${page.url()}, ${pageTitle}`);
+    const dateTag = await page.$eval('div[track-type="tag"]', (el) => el.parentNode?.childNodes[2].textContent) ?? '';
+    const date = new Date(dateTag);
+    const dateText = date.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
+
+    log.debug(`parsing page (${dateText}): ${url} ${pageTitle}`);
+
+    const targetDateText = data.targetDateText;
+    const targetDate = new Date(targetDateText)
+
+    if (date < targetDate) {
+        log.debug(`skipping article: (${dateText} < ${targetDateText}): ${url} ${pageTitle}`);
+        return;
+    }
 
     const tag = await page.$eval('div[track-type="tag"]', (el) => el.textContent) ?? '';
     const title = await page.$eval('div[track-type="tag"]', (el) => el.parentNode?.querySelector('h1')?.textContent) ?? '';
-    const dateText = await page.$eval('div[track-type="tag"]', (el) => el.parentNode?.childNodes[2].textContent) ?? '';
 
     const authors = await page.$eval('div[track-type="tag"]', (el) => {
         const node = el.parentNode?.parentNode?.parentNode?.querySelector('h5')?.parentNode?.parentNode;
@@ -99,11 +131,12 @@ router.addHandler('article', async ({ request, page, log }) => {
     }) ?? '';
 
     const text = await page.$eval('div[track-type="tag"]', (el) => el.parentNode?.parentNode?.parentNode?.querySelector('span[data-track-type]')?.parentNode?.parentNode?.textContent) ?? '';
-    const date = new Date(dateText);
+
+    log.info(`saving page (${dateText}): ${url} ${title}`);
 
     await Apify.Dataset.pushData({
         title: title,
-        url: request.loadedUrl,
+        url: url,
         authors: authors,
         date: date,
         tag: tag,

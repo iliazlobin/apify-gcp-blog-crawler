@@ -1,3 +1,24 @@
 {
-    "paginationLimit": 10
+    "lookBackWindow": 1,
+    "paginationLimit": 1,
+    "pageItemsLimit": 3,
+    "urls": [
+        "https://cloud.google.com/blog/products/ai-machine-learning",
+        "https://cloud.google.com/blog/products/api-management",
+        "https://cloud.google.com/blog/products/application-development",
+        "https://cloud.google.com/blog/products/cloud-migration",
+        "https://cloud.google.com/blog/products/compute",
+        "https://cloud.google.com/blog/products/compliance",
+        "https://cloud.google.com/blog/products/containers-kubernetes",
+        "https://cloud.google.com/blog/topics/cost-management",
+        "https://cloud.google.com/blog/products/databases",
+        "https://cloud.google.com/blog/products/devops-sre",
+        "https://cloud.google.com/blog/products/identity-security",
+        "https://cloud.google.com/blog/products/infrastructure",
+        "https://cloud.google.com/blog/products/management-tools",
+        "https://cloud.google.com/blog/products/networking",
+        "https://cloud.google.com/blog/products/open-source",
+        "https://cloud.google.com/blog/products/serverless",
+        "https://cloud.google.com/blog/products/storage-data-transfer"
+    ]
 }

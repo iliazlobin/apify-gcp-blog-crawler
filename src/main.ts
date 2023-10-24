@@ -4,22 +4,24 @@ import { router } from './routes.js';
 
 await Actor.init();
 
+const proxyConfiguration = await Actor.createProxyConfiguration();
+
 // https://cloud.google.com/blog/topics/inside-google-cloud/complete-list-google-cloud-blog-links-2021
-const startUrls = [
-    // 'https://cloud.google.com/blog/products/ai-machine-learning',
+const defaultUrls = [
+    'https://cloud.google.com/blog/products/ai-machine-learning',
     'https://cloud.google.com/blog/products/cloud-migration',
 ];
 
-const proxyConfiguration = await Actor.createProxyConfiguration();
-
 const {
     maxRequestsPerMinute = 5,
-    maxRequestRetries = 10,
-    requestHandlerTimeoutSecs = 1800,
+    maxRequestRetries = 5,
+    requestHandlerTimeoutSecs = 600,
+    urls = defaultUrls,
 } = await Actor.getInput<{
     maxRequestsPerMinute?: number,
     maxRequestRetries?: number,
     requestHandlerTimeoutSecs?: number
+    urls?: string[],
 }>() || {};
 
 const crawler = new PuppeteerCrawler({
@@ -39,6 +41,6 @@ const crawler = new PuppeteerCrawler({
     },
 });
 
-await crawler.run(startUrls);
+await crawler.run(urls);
 
 await Actor.exit();
